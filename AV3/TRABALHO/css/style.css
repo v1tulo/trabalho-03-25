@@ -1,0 +1,14 @@
+/* Arquivo CSS para estilização */
+body {
+    font-family: Arial, sans-serif;
+}
+
+label {
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="submit"] {
+    margin-bottom: 10px;
+}

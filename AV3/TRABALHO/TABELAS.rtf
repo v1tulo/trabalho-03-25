@@ -1,0 +1,342 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\colortbl ;\red255\green255\blue0;\red0\green255\blue255;\red192\green192\blue192;\red255\green0\blue255;}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sl240\slmult1\qj\highlight1\b\f0\fs22\lang22 TABELAS:\par
+\highlight0\b0\par
+CREATE TABLE orders (\par
+    id_order INT AUTO_INCREMENT PRIMARY KEY,\par
+    celular VARCHAR(20) NOT NULL,\par
+    data TIMESTAMP DEFAULT CURRENT_TIMESTAMP\par
+);\par
+\par
+CREATE TABLE orders_items (\par
+    id_order INT,\par
+    product_id INT,\par
+    quantity INT,\par
+    subtotal DECIMAL(10,2),\par
+    FOREIGN KEY (id_order) REFERENCES orders(id_order)\par
+);\par
+\par
+CREATE TABLE produtos (\par
+    id INT AUTO_INCREMENT PRIMARY KEY,\par
+    produto VARCHAR(255) NOT NULL,\par
+    valor DECIMAL(10,2) NOT NULL,\par
+    imagem VARCHAR(255) NOT NULL\par
+);\par
+\par
+\highlight2\b includes\\db_connection.php\par
+\highlight0\par
+\b0 <?php\par
+// Configura\'e7\'f5es do banco de dados\par
+$servername = "localhost";\par
+$port = 7306;\par
+$username = "root";\par
+$password = "";\par
+$dbname = "banco_de_dados";\par
+\par
+try \{\par
+    // Cria\'e7\'e3o da conex\'e3o PDO\par
+    $pdo = new PDO("mysql:host=$servername;port=$port;dbname=$dbname", $username, $password);\par
+    // Configura\'e7\'e3o para lan\'e7ar exce\'e7\'f5es em caso de erro\par
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);\par
+\} catch(PDOException $e) \{\par
+    // Em caso de erro na conex\'e3o, exibe uma mensagem de erro\par
+    echo "Erro na conex\'e3o com o banco de dados: " . $e->getMessage();\par
+    // Encerra o script\par
+    die();\par
+\}\par
+?>\par
+\par
+\highlight2\b includes\\functions.php\par
+\highlight0\par
+\b0 <?php\par
+session_start();\par
+\par
+// Verifica se o usu\'e1rio est\'e1 logado\par
+function isLoggedIn()\{\par
+    return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;\par
+\}\par
+\par
+// Fun\'e7\'e3o para verificar login\par
+function login($username, $password)\{\par
+    // Aqui voc\'ea pode adicionar l\'f3gica para verificar usu\'e1rio e senha.\par
+    // Por exemplo, comparar com dados em um banco de dados.\par
+    // Neste exemplo, vamos apenas definir um usu\'e1rio e senha fixos.\par
+    $valid_username = "admin";\par
+    $valid_password = "admin123";\par
+\par
+    if($username == $valid_username && $password == $valid_password)\{\par
+        $_SESSION['logged_in'] = true;\par
+        return true;\par
+    \} else \{\par
+        return false;\par
+    \}\par
+\}\par
+// Fun\'e7\'e3o para exibir o relat\'f3rio de total de pedidos por dia\par
+function showTotalPedidosPorDia($pdo) \{\par
+    try \{\par
+        // Consulta SQL para contar o n\'famero de pedidos feitos em cada dia\par
+        $query = "SELECT DATE(data) as data_pedido, COUNT(*) as total_pedidos FROM orders GROUP BY DATE(data)";\par
+        $stmt = $pdo->prepare($query);\par
+        $stmt->execute();\par
+\par
+        // Exibe os resultados\par
+        echo "<h2>Total de Pedidos por Dia</h2>";\par
+        echo "<table border='1'>";\par
+        echo "<tr><th>Data do Pedido</th><th>Total de Pedidos</th></tr>";\par
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) \{\par
+            echo "<tr>";\par
+            echo "<td>\{$row['data_pedido']\}</td>";\par
+            echo "<td>\{$row['total_pedidos']\}</td>";\par
+            echo "</tr>";\par
+        \}\par
+        echo "</table>";\par
+    \} catch (PDOException $e) \{\par
+        echo "Erro ao executar a consulta: " . $e->getMessage();\par
+    \}\par
+\}\par
+\par
+// Fun\'e7\'e3o para exibir o relat\'f3rio de produtos mais vendidos\par
+function showProdutosMaisVendidos($pdo) \{\par
+    try \{\par
+        // Consulta SQL para obter os produtos mais vendidos\par
+        $query = "SELECT produtos.produto, SUM(orders_items.quantity) as total_vendas \par
+                  FROM produtos \par
+                  INNER JOIN orders_items ON produtos.id = orders_items.product_id \par
+                  GROUP BY produtos.produto \par
+                  ORDER BY total_vendas DESC";\par
+        $stmt = $pdo->prepare($query);\par
+        $stmt->execute();\par
+\par
+        // Exibe os resultados\par
+        echo "<h2>Produtos Mais Vendidos</h2>";\par
+        echo "<table border='1'>";\par
+        echo "<tr><th>Produto</th><th>Total de Vendas</th></tr>";\par
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) \{\par
+            echo "<tr>";\par
+            echo "<td>\{$row['produto']\}</td>";\par
+            echo "<td>\{$row['total_vendas']\}</td>";\par
+            echo "</tr>";\par
+        \}\par
+        echo "</table>";\par
+    \} catch (PDOException $e) \{\par
+        echo "Erro ao executar a consulta: " . $e->getMessage();\par
+    \}\par
+\}\par
+\par
+// Fun\'e7\'e3o para exibir o relat\'f3rio de total de pedidos por celular\par
+function showTotalPedidosPorCelular($pdo) \{\par
+    try \{\par
+        // Consulta SQL para calcular o total de pedidos por celular\par
+        $query = "SELECT celular, COUNT(*) as total_pedidos FROM orders GROUP BY celular";\par
+        $stmt = $pdo->prepare($query);\par
+        $stmt->execute();\par
+\par
+        // Exibe os resultados\par
+        echo "<h2>Total de Pedidos por Celular</h2>";\par
+        echo "<table border='1'>";\par
+        echo "<tr><th>Celular</th><th>Total de Pedidos</th></tr>";\par
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) \{\par
+            echo "<tr>";\par
+            echo "<td>\{$row['celular']\}</td>";\par
+            echo "<td>\{$row['total_pedidos']\}</td>";\par
+            echo "</tr>";\par
+        \}\par
+        echo "</table>";\par
+    \} catch (PDOException $e) \{\par
+        echo "Erro ao executar a consulta: " . $e->getMessage();\par
+    \}\par
+\}\par
+\par
+// Fun\'e7\'e3o para exibir o relat\'f3rio de total da soma de subtotal por celular e ID do Pedido, juntamente com os detalhes de cada item\par
+function showTotalComItensPorCelular($pdo) \{\par
+    try \{\par
+        // Consulta SQL para obter o total da soma de subtotal por celular e ID do Pedido, juntamente com os detalhes de cada item\par
+        $query = "SELECT orders.celular, orders.id_order, produtos.produto, orders_items.quantity, orders_items.subtotal, \par
+                         SUM(orders_items.subtotal) OVER(PARTITION BY orders.celular, orders.id_order) as total_subtotal_pedido\par
+                  FROM orders \par
+                  INNER JOIN orders_items ON orders.id_order = orders_items.id_order \par
+                  INNER JOIN produtos ON orders_items.product_id = produtos.id \par
+                  ORDER BY orders.celular, orders.id_order, produtos.produto";\par
+        $stmt = $pdo->prepare($query);\par
+        $stmt->execute();\par
+\par
+        // Vari\'e1veis para controlar a mudan\'e7a de celular e ID do Pedido\par
+        $last_celular = null;\par
+        $last_id_order = null;\par
+\par
+        // Exibe os resultados\par
+        echo "<h2>Total da Soma de Subtotal por Celular e ID do Pedido, Juntamente com os Detalhes de Cada Item</h2>";\par
+        echo "<table border='1'>";\par
+        echo "<tr><th>Celular</th><th>ID do Pedido</th><th>Produto</th><th>Quantidade</th><th>Subtotal</th><th>Total Subtotal Pedido</th></tr>";\par
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) \{\par
+            // Verifica se houve mudan\'e7a de celular ou ID do Pedido\par
+            if ($row['celular'] != $last_celular || $row['id_order'] != $last_id_order) \{\par
+                // Se sim, exibe uma nova linha com o total subtotal do pedido\par
+                echo "<tr>";\par
+                echo "<td>\{$row['celular']\}</td>";\par
+                echo "<td>\{$row['id_order']\}</td>";\par
+                echo "<td colspan='3'></td>"; // Colunas vazias para o produto, quantidade e subtotal\par
+                echo "<td>\{$row['total_subtotal_pedido']\}</td>";\par
+                echo "</tr>";\par
+                // Atualiza as vari\'e1veis de controle\par
+                $last_celular = $row['celular'];\par
+                $last_id_order = $row['id_order'];\par
+            \}\par
+            // Exibe os detalhes do item\par
+            echo "<tr>";\par
+            echo "<td colspan='2'></td>"; // Colunas vazias para o celular e ID do Pedido\par
+            echo "<td>\{$row['produto']\}</td>";\par
+            echo "<td>\{$row['quantity']\}</td>";\par
+            echo "<td>\{$row['subtotal']\}</td>";\par
+            echo "<td></td>"; // Coluna vazia para o total subtotal do pedido\par
+            echo "</tr>";\par
+        \}\par
+        echo "</table>";\par
+    \} catch (PDOException $e) \{\par
+        echo "Erro ao executar a consulta: " . $e->getMessage();\par
+    \}\par
+\}\par
+?>\par
+\par
+\highlight3\b css/style.css\par
+\par
+\highlight0\b0 /* Arquivo CSS para estiliza\'e7\'e3o */\par
+body \{\par
+    font-family: Arial, sans-serif;\par
+\}\par
+\par
+label \{\par
+    font-weight: bold;\par
+\}\par
+\par
+input[type="text"],\par
+input[type="password"],\par
+input[type="submit"] \{\par
+    margin-bottom: 10px;\par
+\}\par
+\par
+\highlight4\b login.php\par
+\par
+\highlight0\b0 <?php\par
+require_once 'includes/functions.php';\par
+\par
+// Verifica se o formul\'e1rio de login foi submetido\par
+if(isset($_POST['username'], $_POST['password']))\{\par
+    $username = $_POST['username'];\par
+    $password = $_POST['password'];\par
+\par
+    if(login($username, $password))\{\par
+        // Login bem sucedido, redireciona para a p\'e1gina protegida\par
+        header("Location: reports.php");\par
+        exit();\par
+    \} else \{\par
+        // Login falhou\par
+        $error = "Usu\'e1rio ou senha inv\'e1lidos.";\par
+    \}\par
+\}\par
+?>\par
+\par
+<html>\par
+<head>\par
+    <title>Login</title>\par
+    <link rel="stylesheet" type="text/css" href="css/style.css">\par
+</head>\par
+<body>\par
+    <h2>Login</h2>\par
+    <?php if(isset($error)) echo "<p>$error</p>"; ?>\par
+    <form method="post" action="">\par
+        <label for="username">Usu\'e1rio:</label><br>\par
+        <input type="text" id="username" name="username" required><br>\par
+        <label for="password">Senha:</label><br>\par
+        <input type="password" id="password" name="password" required><br><br>\par
+        <input type="submit" value="Entrar">\par
+    </form>\par
+</body>\par
+</html>\par
+\par
+\highlight4\b reports.php\par
+\highlight0\b0\par
+<?php\par
+require_once 'includes/functions.php';\par
+require_once 'includes/db_connection.php'; // Inclui o arquivo de conex\'e3o com o banco de dados\par
+\par
+// Verifica se o usu\'e1rio est\'e1 logado\par
+if(!isLoggedIn())\{\par
+    // Se n\'e3o estiver logado, redireciona para a p\'e1gina de login\par
+    header("Location: login.php");\par
+    exit();\par
+\}\par
+\par
+// Verifica se o bot\'e3o de logoff foi clicado\par
+if(isset($_POST['logout'])) \{\par
+    // Destruir todas as vari\'e1veis de sess\'e3o\par
+    session_unset();\par
+    // Finalizar a sess\'e3o\par
+    session_destroy();\par
+    // Redirecionar para a p\'e1gina de login\par
+    header("Location: login.php");\par
+    exit();\par
+\}\par
+?>\par
+\par
+<!DOCTYPE html>\par
+<html>\par
+<head>\par
+    <title>Relat\'f3rios</title>\par
+    <link rel="stylesheet" type="text/css" href="css/style.css">\par
+</head>\par
+<body>\par
+    <h2>Relat\'f3rios</h2>\par
+\par
+    <!-- Bot\'e3o de logoff -->\par
+    <form method="post" action="">\par
+        <input type="submit" name="logout" value="Logoff">\par
+    </form>\par
+\par
+    <!-- Formul\'e1rio para selecionar o relat\'f3rio -->\par
+    <form method="post" action="">\par
+        <label for="report">Selecione um Relat\'f3rio:</label>\par
+        <select id="report" name="report">\par
+            <option value="total_pedidos_por_dia">Total de Pedidos por Dia</option>\par
+            <option value="produtos_mais_vendidos">Produtos Mais Vendidos</option>\par
+            <option value="total_pedidos_por_celular">Total de Pedidos por Celular</option>\par
+\tab\tab\tab <option value="total_com_itens_por_celular">Total com Itens por Celular</option>\par
+        </select>\par
+        <input type="submit" value="Gerar Relat\'f3rio">\par
+    </form>\par
+\par
+    <?php\par
+    // Verifica se o formul\'e1rio foi submetido\par
+    if ($_SERVER["REQUEST_METHOD"] == "POST") \{\par
+        // Verifica se o par\'e2metro 'report' foi enviado\par
+        if (isset($_POST['report'])) \{\par
+            $report = $_POST['report'];\par
+\par
+            // Exibe o relat\'f3rio correspondente com base no par\'e2metro recebido\par
+            switch ($report) \{\par
+                case 'total_pedidos_por_dia':\par
+                    showTotalPedidosPorDia($pdo);\par
+                    break;\par
+                case 'produtos_mais_vendidos':\par
+                    showProdutosMaisVendidos($pdo);\par
+                    break;\par
+                case 'total_pedidos_por_celular':\par
+                    showTotalPedidosPorCelular($pdo);\par
+                    break;\par
+\tab case 'total_com_itens_por_celular':\par
+\tab      showTotalComItensPorCelular($pdo);\par
+\tab      break;\par
+                default:\par
+                    echo "Relat\'f3rio inv\'e1lido.";\par
+                    break;\par
+            \}\par
+        \}\par
+    \}\par
+    ?>\par
+\par
+</body>\par
+</html>\par
+\par
+}
+ 
